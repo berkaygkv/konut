@@ -1,0 +1,9 @@
+.vscode
+.venv
+profile_1
+links.csv
+links_list.pkl
+data/links/*csv
+data/*csv
+data/sahibinden_db_v2.db
+.ipynb_checkpoints
