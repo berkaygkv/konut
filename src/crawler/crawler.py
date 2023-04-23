@@ -3,6 +3,7 @@ import time
 from itertools import chain, product
 import random
 import os
+from tqdm import tqdm
 
 import jmespath
 import undetected_chromedriver as uc
@@ -11,18 +12,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 import pandas as pd
-
-options = uc.ChromeOptions()
-
-# setting profile
-# options.user_data_dir = "profile_1"
-
-CRAWL_INTERVAL = 5
-driver = uc.Chrome(options=options, user_data_dir="profile_1")
-driver.get("https://sahibinden.com")
-time.sleep(25)
-driver.find_element(By.XPATH, "/html/body/div[3]/div/ul/li[3]/a").text
-#$end
 
 
 def get_ilan_details(url):
@@ -37,10 +26,15 @@ def get_ilan_details(url):
     except:
         pass
 
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_all_elements_located((By.XPATH, '//div[@id="gaPageViewTrackingJson"]')))   
     # ilan detail json
     ilan_json_text = driver.find_element(By.XPATH,
         '//div[@id="gaPageViewTrackingJson"]').get_attribute('data-json')
     ilan_json = json.loads(ilan_json_text)
+
+    if ilan_json.get("route") == "error":
+        return {}
 
     # combine ilan keys and values
     ilan_keys = jmespath.search('dmpData[*].name', ilan_json)
@@ -57,7 +51,10 @@ def get_ilan_details(url):
     properties = get_ilan_properties()
     ilan_data_json.update(properties)
 
+    interval = random.randint((CRAWL_INTERVAL -  0.5) * 1000, (CRAWL_INTERVAL +  0.5) * 1000) / 1000
+    time.sleep(interval)
     return ilan_data_json
+
 
 def get_ilan_properties():
     properties_table_element = driver.find_element(By.XPATH, "//div[@id='classifiedProperties']")
@@ -80,11 +77,6 @@ def get_links(category_url):
 
     last_page_element = navi_buttons.find_element(By.XPATH, 
         './/li//input[@id="currentPageValue"]')
-    current_page = last_page_element.get_attribute('value')
-
-    categories = driver.find_elements(By.XPATH, '//li[@class="cl2"]')
-    category_links = [cat.find_element(By.XPATH, 
-        './/a').get_attribute('href') for cat in categories]
 
     navi_buttons = driver.find_element(By.XPATH, 
         '//ul[@class="pageNaviButtons"]')
@@ -121,7 +113,6 @@ def get_links(category_url):
         if not next_button_obj:
             break
 
-
         next_button = next_button_obj[0]
         loc_nxt = next_button.location_once_scrolled_into_view
         loc_y = loc_nxt['y'] - 70
@@ -141,12 +132,10 @@ def get_links(category_url):
 
 def get_all_ilan_data(links):
     final_data = []
-    for ad_id, link, _ in links:
+    for ad_id, link, _ in tqdm(links):
         data = get_ilan_details(link)
         data.update({"ad_id": ad_id})
         final_data.append(data)
-        interval = random.randint((CRAWL_INTERVAL -  0.5) * 1000, (CRAWL_INTERVAL +  0.5) * 1000) / 1000
-        time.sleep(interval)
     return final_data
 
 
@@ -158,20 +147,31 @@ def iterate_categories(city_list: list):
 
     for city, sale_type, konut_type, ad_owner in category_combionations:
         category_url = f"https://www.sahibinden.com/{sale_type}-{konut_type}/{city}/{ad_owner}?pagingSize=50"
-        print(category_url)
         link_path = f"/Users/berkayg/Codes/sahibinden-project/data/links/{city}_{sale_type}_{konut_type}_{ad_owner}.csv"
         if not os.path.exists(link_path):
             all_links = get_links(category_url)
             all_links.to_csv(link_path, index=False)
 
-# cities = ["istanbul"]
-# iterate_categories(cities)
-# all_links = get_links()
-# import pickle
-# with open("links_list.pkl", "rb") as rd:
-#     all_links = pickle.load(rd)
-all_links = pd.read_csv("/Users/berkayg/Codes/sahibinden-project/data/unified_links.csv")
-all_links = all_links.to_numpy().tolist()
-dt  = get_all_ilan_data(all_links)
-dt.to_csv("/Users/berkayg/Codes/sahibinden-project/data/21_april_23.csv", index=False)
-print("Done")
+
+if __name__ == "__main__":
+    CRAWL_INTERVAL = 6
+    options = uc.ChromeOptions()
+    options.user_data_dir = "profile_1"
+
+    driver = uc.Chrome(options=options, headless=True, version_main=110)
+    driver.get("https://sahibinden.com")
+    time.sleep(25)
+
+    # cities = ["istanbul"]
+    # iterate_categories(cities)
+    # all_links = get_links()
+
+    all_links = pd.read_csv(r"E:\~Folders\Coding env\sahibinden_house\data\unified_links.csv")
+    last_ad = 1091516281
+    last_index = all_links.loc[all_links["ad_id"] == last_ad].index[0]
+    all_links = all_links.to_numpy().tolist()[last_index:]
+
+    dt = get_all_ilan_data(all_links)
+    df = pd.DataFrame(dt) 
+    df.to_csv(r"E:\~Folders\Coding env\sahibinden_house\data\21_april_23.csv", index=False)
+    print("Done")
