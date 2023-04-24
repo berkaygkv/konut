@@ -158,7 +158,7 @@ if __name__ == "__main__":
     options = uc.ChromeOptions()
     options.user_data_dir = "profile_1"
 
-    driver = uc.Chrome(options=options, headless=True, version_main=110)
+    driver = uc.Chrome(options=options, headless=False, version_main=112)
     driver.get("https://sahibinden.com")
     time.sleep(25)
 
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # all_links = get_links()
 
     all_links = pd.read_csv(r"E:\~Folders\Coding env\sahibinden_house\data\unified_links.csv")
-    last_ad = 1091516281
+    last_ad = 1087177100
     last_index = all_links.loc[all_links["ad_id"] == last_ad].index[0]
     all_links = all_links.to_numpy().tolist()[last_index:]
 
