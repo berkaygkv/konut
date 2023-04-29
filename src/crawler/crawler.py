@@ -44,6 +44,7 @@ def get_ilan_details(url):
 
     # combine ilan keys and values
     ilan_keys = jmespath.search('dmpData[*].name', ilan_json)
+    ilan_keys = [k.replace("satilik_", "").replace("kiralik_", "") for k in ilan_keys]
     ilan_values = jmespath.search('dmpData[*].value', ilan_json)
     ilan_data_json = dict(zip(ilan_keys, ilan_values))
 
@@ -102,6 +103,7 @@ def get_links(category_url, manager):
             print(
                 f"Presence of all elements Timeout Error")
             raise
+
         time.sleep(2)
         table = driver.find_element(By.XPATH,table_xp)
         hrefs = table.find_elements(By.XPATH,
@@ -114,13 +116,15 @@ def get_links(category_url, manager):
             link = href.find_element(By.XPATH,
                 './/following-sibling::a[contains(@href, "/ilan/")]').get_attribute('href')
             listings.append({"ad_id": int(ad_id), "url": link, "checked": False, "initial_datetime": now, "last_update_datetime": now})
-        all_links.append(listings)
+
         # print(f"{current_page} / {last_page} --- # of new ads: {number_of_new_ads} ---- # of Total unchecked URLs: {total_new_ads}")
+        all_links += listings
         next_button_obj = driver.find_elements(By.XPATH,
             '//a[(@class="prevNextBut") and (@title="Sonraki")]')
         if not next_button_obj:
             break
-
+        
+        all_links.extend(listings)
         next_button = next_button_obj[0]
         loc_nxt = next_button.location_once_scrolled_into_view
         loc_y = loc_nxt['y'] - 70
@@ -134,9 +138,12 @@ def get_links(category_url, manager):
                 EC.invisibility_of_element_located((By.XPATH, '//div[@class="opening"]')))
         except TimeoutException:
             print(f"Loading element Timeout Error")
-    ls = list(chain(*all_links))
-    links_df = pd.DataFrame(ls, columns=["ad_id", "link", "checked"]).drop_duplicates(subset=["link"])
-    return links_df
+
+    ls = pd.DataFrame(all_links).drop_duplicates(subset=["url"]).to_dict(orient="records")
+    manager.insert_bulk_links(ls)
+    # ls = list(chain(*all_links))
+    # links_df = pd.DataFrame(ls, columns=["ad_id", "link", "checked"]).drop_duplicates(subset=["link"])
+    # return links_df
 
 def get_all_ilan_data(manager):
     final_data = []
@@ -146,6 +153,12 @@ def get_all_ilan_data(manager):
         data.update({"ad_id": ad_id})
         final_data.append(data)
         manager.insert_ilan_data(data)
+
+        utc_dt = datetime.now(timezone.utc)
+        now = utc_dt.astimezone(pytz.timezone('Europe/Istanbul'))
+        
+        manager.update_checked_link(ad_id, "checked", True)
+        manager.update_checked_link(ad_id, "last_update_datetime", now)
     return final_data
 
 
@@ -158,6 +171,7 @@ def iterate_categories(city_list: list, manager):
     for city, sale_type, konut_type, ad_owner in category_combionations:
         category_url = f"https://www.sahibinden.com/{sale_type}-{konut_type}/{city}/{ad_owner}?pagingSize=50"
         link_path = f"/Users/berkayg/Codes/sahibinden-project/data/links/{city}_{sale_type}_{konut_type}_{ad_owner}.csv"
+        print(category_url)
         if not os.path.exists(link_path):
             all_links = get_links(category_url, manager)
             #all_links.to_csv(link_path, index=False)
@@ -166,7 +180,8 @@ def iterate_categories(city_list: list, manager):
 CRAWL_INTERVAL = 7
 options = uc.ChromeOptions()
 options.user_data_dir = "profile_1"
-
+prefs = {"profile.managed_default_content_settings.images": 2}
+options.add_experimental_option("prefs", prefs)
 driver = uc.Chrome(headless=False, version_main=112)
 driver.maximize_window()
 driver.get("https://sahibinden.com")

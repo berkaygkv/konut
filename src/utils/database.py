@@ -20,6 +20,8 @@ class DBRegistry:
 
         links_table = Table("urls", self.metadata,  Column("ad_id", Integer, primary_key=True), Column("url", String), Column("checked", Boolean), Column("initial_datetime", DateTime), Column("last_update_datetime", DateTime))
         ad_details_table = Table("ad_details", self.metadata, *column_objects)
+        self.links_table = links_table
+        self.ad_details_table = ad_details_table
         mapper_registry.map_imperatively(Link, links_table)
         mapper_registry.map_imperatively(IlanDetails, ad_details_table)
 
@@ -27,8 +29,8 @@ class DBRegistry:
         type_map = {"String": String, "Float": Float, "Boolean": Boolean, "Integer": Integer}
         with open(PathConstants.configs_path.joinpath("column_mapping.yaml"), "r") as rd:
             column_mapping = yaml.safe_load(rd)
-            primary_columns = [Column(k.encode("windows-1252").decode('unicode-escape').encode('latin1').decode('utf8'), type_map[v]) for k, v in column_mapping["primary_columns"].items()]
-            secondary_columns = [Column(k.encode("windows-1252").decode('unicode-escape').encode('latin1').decode('utf8'), Boolean) for k in column_mapping["secondary_columns"]]
+            primary_columns = [Column(k, type_map[v]) for k, v in column_mapping["primary_columns"].items()]
+            secondary_columns = [Column(k, Boolean) for k in column_mapping["secondary_columns"]]
             column_objects = [Column("ad_id", Integer, primary_key=True)] + primary_columns + secondary_columns + [Column("initial_datetime", DateTime), Column("last_update_datetime", DateTime)]
             return column_objects
 
@@ -42,7 +44,7 @@ class DBManager(DBRegistry):
 
     def insert_ilan_data(self, data):
         data = IlanDetails(**data)
-        self.session.add()
+        self.session.add(data)
         self.session.commit()
     
     def insert_bulk_links(self, bulk_data):
@@ -55,6 +57,10 @@ class DBManager(DBRegistry):
     
     def fetch_links(self):
         return self.session.execute(text("SELECT * FROM urls WHERE checked = False")).all()
+    
+    def update_checked_link(self, ad_id, column, value):
+        self.session.query(Link).filter(Link.ad_id == ad_id).update({column: value})
+        self.session.commit()
 #manager = DBManager("E:/~Folders/Coding env/sahibinden_house/data/database.sqlite")
 
 #data = [{"ad_id": 7, "url": "deneme1.com", "checked": 0}, {"ad_id": 8, "url": "deneme2.com", "checked": 0}, {"ad_id": 9, "url": "deneme3.com", "checked": 0}]

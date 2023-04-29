@@ -27,5 +27,5 @@ def start_crawling():
 
 manager = DBManager("data/database.sqlite")
 print(PathConstants.database_path)
-iterate_categories(["istanbul"], manager)
-# get_all_ilan_data(manager)
+# iterate_categories(["istanbul"], manager)
+get_all_ilan_data(manager)

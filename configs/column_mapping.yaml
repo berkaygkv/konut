@@ -1,13 +1,13 @@
 primary_columns:
-    fiyat: Float
-    m2_brutfiyat: Float
-    m2_brut: Float
-    m2_net: Float
-    aidat_tl: Float
-    oda_sayisi: Integer
-    bina_yasi: Integer
-    bulundugu_kat: Integer
-    kat_sayisi: Integer
+    fiyat: String
+    m2_brutfiyat: String
+    m2_brut: String
+    m2_net: String
+    aidat_tl: String
+    oda_sayisi: String
+    bina_yasi: String
+    bulundugu_kat: String
+    kat_sayisi: String
     cat1: String
     cat2: String
     cat3: String
@@ -20,20 +20,22 @@ primary_columns:
     loc5: String
     lat: String
     lon: String
+    isitma: String
+    banyo_sayisi: String
+    balkon: String
+    kullanim_durumu: String
+    esyali: String
+    site_adi: String
+    kimden: String
+    ilan_aks: String
+    site_icerisinde: String
+    krediye_uygun: String
+    tapu_durumu: String
+    goruntulu_arama_ile_gezilebilir: String
+    depozito_tl: String
+
     
 secondary_columns: 
-  - isitma
-  - banyo_sayisi
-  - balkon
-  - esyali
-  - kullanim_durumu
-  - site_icerisinde
-  - site_adi
-  - krediye_uygun
-  - tapu_durumu
-  - kimden
-  - goruntulu_arama_ile_gezilebilir
-  - ilan_aks
   - Batı
   - Doğu
   - Güney
