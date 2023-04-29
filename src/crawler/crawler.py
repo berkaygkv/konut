@@ -13,6 +13,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 import pandas as pd
 
+from datetime import datetime, timezone
+import pytz
+
 
 def get_ilan_details(url):
     driver.get(url)
@@ -62,11 +65,11 @@ def get_ilan_details(url):
 def get_ilan_properties():
     properties_table_element = driver.find_element(By.XPATH, "//div[@id='classifiedProperties']")
     properties_element = properties_table_element.find_elements(By.XPATH, "..//li")
-    property_values = dict((k.text, k.get_attribute("class")) for k in properties_element)
+    property_values = dict((k.text, k.get_attribute("class") != "") for k in properties_element)
     return property_values
 
 
-def get_links(category_url):
+def get_links(category_url, manager):
     links_page = category_url
     driver.get(links_page)
     time.sleep(1)
@@ -89,6 +92,8 @@ def get_links(category_url):
 
     all_links = []
     while True:
+        utc_dt = datetime.now(timezone.utc)
+        now = utc_dt.astimezone(pytz.timezone('Europe/Istanbul'))
         table_xp = '//table[@id="searchResultsTable"]'
         try:
             WebDriverWait(driver, 15).until(
@@ -108,7 +113,7 @@ def get_links(category_url):
                 './/following-sibling::div[@class="action-wrapper"]').get_attribute("data-classified-id")
             link = href.find_element(By.XPATH,
                 './/following-sibling::a[contains(@href, "/ilan/")]').get_attribute('href')
-            listings.append([int(ad_id), link, None])
+            listings.append({"ad_id": int(ad_id), "url": link, "checked": False, "initial_datetime": now, "last_update_datetime": now})
         all_links.append(listings)
         # print(f"{current_page} / {last_page} --- # of new ads: {number_of_new_ads} ---- # of Total unchecked URLs: {total_new_ads}")
         next_button_obj = driver.find_elements(By.XPATH,
@@ -133,16 +138,18 @@ def get_links(category_url):
     links_df = pd.DataFrame(ls, columns=["ad_id", "link", "checked"]).drop_duplicates(subset=["link"])
     return links_df
 
-def get_all_ilan_data(links):
+def get_all_ilan_data(manager):
     final_data = []
-    for ad_id, link, _ in tqdm(links):
+    links = manager.fetch_links()[2:]
+    for ad_id, link, _, _ , _ in tqdm(links):
         data = get_ilan_details(link)
         data.update({"ad_id": ad_id})
         final_data.append(data)
+        manager.insert_ilan_data(data)
     return final_data
 
 
-def iterate_categories(city_list: list):
+def iterate_categories(city_list: list, manager):
     base_1 = ["kiralik", "satilik",]
     base_2 = ["daire", "mustakil-ev", "residence", "villa"]
     base_3 = ["sahibinden", "emlak-ofisinden"]
@@ -152,29 +159,15 @@ def iterate_categories(city_list: list):
         category_url = f"https://www.sahibinden.com/{sale_type}-{konut_type}/{city}/{ad_owner}?pagingSize=50"
         link_path = f"/Users/berkayg/Codes/sahibinden-project/data/links/{city}_{sale_type}_{konut_type}_{ad_owner}.csv"
         if not os.path.exists(link_path):
-            all_links = get_links(category_url)
-            all_links.to_csv(link_path, index=False)
+            all_links = get_links(category_url, manager)
+            #all_links.to_csv(link_path, index=False)
 
 
-if __name__ == "__main__":
-    CRAWL_INTERVAL = 7
-    options = uc.ChromeOptions()
-    options.user_data_dir = "profile_1"
+CRAWL_INTERVAL = 7
+options = uc.ChromeOptions()
+options.user_data_dir = "profile_1"
 
-    driver = uc.Chrome(headless=False, version_main=112)
-    driver.get("https://sahibinden.com")
-    time.sleep(25)
-
-    # cities = ["istanbul"]
-    # iterate_categories(cities)
-    # all_links = get_links()
-
-    all_links = pd.read_csv(r"E:\~Folders\Coding env\sahibinden_house\data\unified_links.csv")
-    last_ad = 1083838204
-    last_index = all_links.loc[all_links["ad_id"] == last_ad].index[0]
-    all_links = all_links.to_numpy().tolist()[last_index:]
-
-    dt = get_all_ilan_data(all_links)
-    df = pd.DataFrame(dt) 
-    df.to_csv(r"E:\~Folders\Coding env\sahibinden_house\data\21_april_23.csv", index=False)
-    print("Done")
+driver = uc.Chrome(headless=False, version_main=112)
+driver.maximize_window()
+driver.get("https://sahibinden.com")
+time.sleep(3)
