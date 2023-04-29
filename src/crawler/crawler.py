@@ -25,9 +25,12 @@ def get_ilan_details(url):
         return {}
     except:
         pass
+    try:
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_all_elements_located((By.XPATH, '//div[@id="gaPageViewTrackingJson"]'))) 
+    except:
+        pass
 
-    WebDriverWait(driver, 15).until(
-        EC.presence_of_all_elements_located((By.XPATH, '//div[@id="gaPageViewTrackingJson"]')))   
     # ilan detail json
     ilan_json_text = driver.find_element(By.XPATH,
         '//div[@id="gaPageViewTrackingJson"]').get_attribute('data-json')
@@ -154,11 +157,11 @@ def iterate_categories(city_list: list):
 
 
 if __name__ == "__main__":
-    CRAWL_INTERVAL = 6
+    CRAWL_INTERVAL = 7
     options = uc.ChromeOptions()
     options.user_data_dir = "profile_1"
 
-    driver = uc.Chrome(options=options, headless=False, version_main=112)
+    driver = uc.Chrome(headless=False, version_main=112)
     driver.get("https://sahibinden.com")
     time.sleep(25)
 
@@ -167,7 +170,7 @@ if __name__ == "__main__":
     # all_links = get_links()
 
     all_links = pd.read_csv(r"E:\~Folders\Coding env\sahibinden_house\data\unified_links.csv")
-    last_ad = 1087177100
+    last_ad = 1083838204
     last_index = all_links.loc[all_links["ad_id"] == last_ad].index[0]
     all_links = all_links.to_numpy().tolist()[last_index:]
 
