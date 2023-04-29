@@ -1,6 +1,6 @@
 primary_columns:
     fiyat: Float
-    satilik_m2_brutfiyat: Float
+    m2_brutfiyat: Float
     m2_brut: Float
     m2_net: Float
     aidat_tl: Float
