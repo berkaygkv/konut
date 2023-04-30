@@ -130,8 +130,6 @@ def get_links(category_url, manager):
         loc_y = loc_nxt['y'] - 70
         driver.execute_script(f"window.scrollBy(0, {loc_y})")
         driver.find_element(By.XPATH,'//a[@title="Sonraki"]').click()
-        loading_element = driver.find_element(By.XPATH,
-            '//div[@class="opening"]')
 
         try:
             WebDriverWait(driver, 25).until(

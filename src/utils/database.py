@@ -1,9 +1,9 @@
 from sqlalchemy import create_engine, MetaData, Table, Float, Column, String, Integer, Boolean, DateTime
 from sqlalchemy.orm import sessionmaker
 import yaml
-from .constants import PathConstants
+from .constants import PathConstants, UtilityConstants
 from sqlalchemy.orm import registry
-from sqlalchemy.sql import select, text
+from sqlalchemy.sql import text
 
 
 class Link:
@@ -30,14 +30,16 @@ class DBRegistry:
         with open(PathConstants.configs_path.joinpath("column_mapping.yaml"), "r") as rd:
             column_mapping = yaml.safe_load(rd)
             primary_columns = [Column(k, type_map[v]) for k, v in column_mapping["primary_columns"].items()]
-            secondary_columns = [Column(k, Boolean) for k in column_mapping["secondary_columns"]]
+            # secondary_columns = [Column(k, Boolean) for k in column_mapping["secondary_columns"]]
+            secondary_columns = UtilityConstants.secondary_columns
             column_objects = [Column("ad_id", Integer, primary_key=True)] + primary_columns + secondary_columns + [Column("initial_datetime", DateTime), Column("last_update_datetime", DateTime)]
             return column_objects
+
 
 class DBManager(DBRegistry):
     def __init__(self, db_path) -> None:
         super().__init__()
-        engine = create_engine(f'sqlite:///{db_path}', echo=True)
+        engine = create_engine(f'sqlite:///{db_path}', echo=False)
         self.metadata.create_all(bind=engine)
         Session = sessionmaker(bind=engine)
         self.session = Session()
@@ -49,7 +51,9 @@ class DBManager(DBRegistry):
     
     def insert_bulk_links(self, bulk_data):
         data = [Link(**k) for k in bulk_data]
-        self.session.add_all(data)
+        # self.session.add_all(data)
+        for dt in data:
+            self.session.merge(dt)
         self.session.commit()
 
     def filter_unchecked(self):
@@ -61,7 +65,3 @@ class DBManager(DBRegistry):
     def update_checked_link(self, ad_id, column, value):
         self.session.query(Link).filter(Link.ad_id == ad_id).update({column: value})
         self.session.commit()
-#manager = DBManager("E:/~Folders/Coding env/sahibinden_house/data/database.sqlite")
-
-#data = [{"ad_id": 7, "url": "deneme1.com", "checked": 0}, {"ad_id": 8, "url": "deneme2.com", "checked": 0}, {"ad_id": 9, "url": "deneme3.com", "checked": 0}]
-#manager.insert_bulk_links(data)
