@@ -124,7 +124,6 @@ def get_links(category_url, manager):
         if not next_button_obj:
             break
         
-        all_links.extend(listings)
         next_button = next_button_obj[0]
         loc_nxt = next_button.location_once_scrolled_into_view
         loc_y = loc_nxt['y'] - 70
