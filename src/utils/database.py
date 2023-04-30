@@ -31,7 +31,7 @@ class DBRegistry:
             column_mapping = yaml.safe_load(rd)
             primary_columns = [Column(k, type_map[v]) for k, v in column_mapping["primary_columns"].items()]
             # secondary_columns = [Column(k, Boolean) for k in column_mapping["secondary_columns"]]
-            secondary_columns = UtilityConstants.secondary_columns
+            secondary_columns = [Column(k, Boolean) for k in UtilityConstants.secondary_columns]
             column_objects = [Column("ad_id", Integer, primary_key=True)] + primary_columns + secondary_columns + [Column("initial_datetime", DateTime), Column("last_update_datetime", DateTime)]
             return column_objects
 
